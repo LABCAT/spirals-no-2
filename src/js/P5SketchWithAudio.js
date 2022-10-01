@@ -28,7 +28,8 @@ const P5SketchWithAudio = () => {
         p.loadMidi = () => {
             Midi.fromUrl(midi).then(
                 function(result) {
-                    const noteSet1 = result.tracks[5].notes; // Synth 1
+                    console.log(result);
+                    const noteSet1 = result.tracks[3].notes; // Combinator 1
                     p.scheduleCueSet(noteSet1, 'executeCueSet1');
                     p.audioLoaded = true;
                     document.getElementById("loader").classList.add("loading--complete");
@@ -61,39 +62,69 @@ const P5SketchWithAudio = () => {
         p.setup = () => {
             p.canvas = p.createCanvas(p.canvasWidth, p.canvasHeight);
             p.background(0);
+            p.colorMode(p.HSB);
+            p.rectMode(p.CENTER);
         }
 
         p.pointCount = 16;
 
-        p.loopsToDraw = p.pointCount * 2;
+        p.loopsToDraw = 0;
 
         p.draw = () => {
-            const size = p.width >= p.height ? p.width / 32 : p.height / 32;
-
-            for (let index = 1; index <= p.loopsToDraw; index++) {
-                let angle = p.PI;  // 0 would still work here
-                
-                let diameter = size * 0.75 * index;
-                p.fill(255);
-                // Update 360 to TWO_PI, still offset via angle
-                for(let i = angle; i < p.TWO_PI + angle; i += p.TWO_PI / p.pointCount){
-                    let x = diameter / 2 * Math.cos(i + index * p.pointCount) + p.width / 2;
-                    let y = diameter / 2 * Math.sin(i + index * p.pointCount) + p.height / 2;
-                    p.ellipse(x, y, size * 0.03 * index, size * 0.03 * index);
-                }
-            }
-           
-
             if(p.audioLoaded && p.song.isPlaying()){
-
+               
             }
         }
 
+        p.shapes = ['ellipse', 'equilateral', 'rect', 'pentagon', 'hexagon', 'octagon'];
+
         p.executeCueSet1 = (note) => {
-            p.background(p.random(255), p.random(255), p.random(255));
-            p.fill(p.random(255), p.random(255), p.random(255));
-            p.noStroke();
-            p.ellipse(p.width / 2, p.height / 2, p.width / 4, p.width / 4);
+            const { currentCue } = note;
+            const compare = currentCue > 28 ? currentCue % 28 % 8 : currentCue % 8;
+            p.loopsToDraw = compare === 0 ? 16 : compare  * 2;
+            p.background(0, 0, 100);
+            p.strokeWeight(2);
+            if(currentCue % 28 > 24 || currentCue % 28 < 1) {
+                p.loopsToDraw = 24;
+                p.background(0, 0, 0);
+                p.stroke(0, 0, 100);
+            } 
+            
+            const multiplier = 1;
+            const size = p.width >= p.height ? p.width / 64 * multiplier : p.height / 64 * multiplier;
+            const loops = (currentCue % 28 > 24 || currentCue % 28 < 1) ? p.loopsToDraw  * (currentCue % 28 - 24 === 0 ? 4 : currentCue % 28 - 24) : p.loopsToDraw * 2 * multiplier;
+            const shape =  p.random(p.shapes);
+            for (let index = 1; index <= loops; index++) {
+                let angle = 0;  // 0 would still work here
+                
+                let diameter = size * 0.75 * index;
+                let randHue = p.random(0, 360);
+                
+                // Update 360 to TWO_PI, still offset via angle
+                for(let i = angle; i < p.TWO_PI + angle; i += p.TWO_PI / p.pointCount){
+                    
+                    let x = diameter / 2 * Math.cos(i + index * p.pointCount) + p.width / 2;
+                    let y = diameter / 2 * Math.sin(i + index * p.pointCount) + p.height / 2;
+                    const delay = (currentCue % 28 > 24 || currentCue % 28 < 1) ? index * 4 : 25,
+                    fillColour = 360 / loops * index;
+
+                    setTimeout(
+                        function () {
+                            p.fill(fillColour, 100, 100, 0.2);
+                            p.stroke(fillColour, 100, 100, 0.2);
+                            p.stroke(0, 0, 0);
+                            p[shape](x, y, size * 0.02 * index, size * 0.02 * index);
+                            p.fill(fillColour, 100, 100, 0.4);
+                            p.stroke(fillColour, 100, 100, 0.4);
+                            p[shape](x, y, size * 0.01 * index, size * 0.01 * index);
+                            p.fill(fillColour, 100, 100, 0.6);
+                            p.stroke(fillColour, 0, 100, 0.6);
+                            p[shape](x, y, size * 0.005 * index, size * 0.005 * index);
+                        },
+                        (delay * i)
+                    );
+                }
+            }
         }
 
         p.hasStarted = false;
@@ -154,6 +185,84 @@ const P5SketchWithAudio = () => {
                 p.song.stop();
             }
         };
+
+        /*
+        * function to draw an equilateral triangle with a set width
+        * based on x, y co-oridinates that are the center of the triangle
+        * @param {Number} x        - x-coordinate that is at the center of triangle
+        * @param {Number} y      	- y-coordinate that is at the center of triangle
+        * @param {Number} width    - radius of the hexagon
+        */
+        p.equilateral = (x, y, width) => {
+            const size = width,
+                x1 = x - size,
+                y1 = y + size,
+                x2 = x,
+                y2 = y - size,
+                x3 = x + size,
+                y3 = y + size;
+            p.triangle(x1,y1,x2,y2,x3,y3);
+        }
+
+        /*
+        * function to draw a pentagon shape
+        * adapted from: https://p5js.org/examples/form-regular-polygon.html
+        * @param {Number} x        - x-coordinate of the pentagon
+        * @param {Number} y      - y-coordinate of the pentagon
+        * @param {Number} radius   - radius of the pentagon
+        */
+        p.pentagon = (x, y, radius) => {
+            radius = radius;
+            p.angleMode(p.RADIANS);
+            var angle = p.TWO_PI / 5;
+            p.beginShape();
+            for (var a = p.TWO_PI/10; a < p.TWO_PI + p.TWO_PI/10; a += angle) {
+                var sx = x + p.cos(a) * radius;
+                var sy = y + p.sin(a) * radius;
+                p.vertex(sx, sy);
+            }
+            p.endShape(p.CLOSE);
+        }
+
+        /*
+        * function to draw a hexagon shape
+        * adapted from: https://p5js.org/examples/form-regular-polygon.html
+        * @param {Number} x        - x-coordinate of the hexagon
+        * @param {Number} y      - y-coordinate of the hexagon
+        * @param {Number} radius   - radius of the hexagon
+        */
+        p.hexagon = (x, y, radius) => {
+            radius = radius;
+            p.angleMode(p.RADIANS);
+            var angle = p.TWO_PI / 6;
+            p.beginShape();
+            for (var a = p.TWO_PI/12; a < p.TWO_PI + p.TWO_PI/12; a += angle) {
+                var sx = x + p.cos(a) * radius;
+                var sy = y + p.sin(a) * radius;
+                p.vertex(sx, sy);
+            }
+            p.endShape(p.CLOSE);
+        }
+
+        /*
+        * function to draw a octagon shape
+        * adapted from: https://p5js.org/examples/form-regular-polygon.html
+        * @param {Number} x        - x-coordinate of the octagon
+        * @param {Number} y      - y-coordinate of the octagon
+        * @param {Number} radius   - radius of the octagon
+        */
+        p.octagon = (x, y, radius) => {
+            radius = radius;
+            p.angleMode(p.RADIANS);
+            var angle = p.TWO_PI / 8;
+            p.beginShape();
+            for (var a = p.TWO_PI/16; a < p.TWO_PI + p.TWO_PI/16; a += angle) {
+                var sx = x + p.cos(a) * radius;
+                var sy = y + p.sin(a) * radius;
+                p.vertex(sx, sy);
+            }
+            p.endShape(p.CLOSE);
+        }
 
         p.reset = () => {
 

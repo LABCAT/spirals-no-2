@@ -1,0 +1,22 @@
+{
+  "files": {
+    "main.css": "/static/css/main.a60116e0.chunk.css",
+    "main.js": "/static/js/main.06ebc631.chunk.js",
+    "main.js.map": "/static/js/main.06ebc631.chunk.js.map",
+    "runtime-main.js": "/static/js/runtime-main.599c6818.js",
+    "runtime-main.js.map": "/static/js/runtime-main.599c6818.js.map",
+    "static/js/2.788e8461.chunk.js": "/static/js/2.788e8461.chunk.js",
+    "static/js/2.788e8461.chunk.js.map": "/static/js/2.788e8461.chunk.js.map",
+    "index.html": "/index.html",
+    "static/css/main.a60116e0.chunk.css.map": "/static/css/main.a60116e0.chunk.css.map",
+    "static/js/2.788e8461.chunk.js.LICENSE.txt": "/static/js/2.788e8461.chunk.js.LICENSE.txt",
+    "static/media/spirals-no-2.60442a4c.ogg": "/static/media/spirals-no-2.60442a4c.ogg",
+    "static/media/spirals-no-2.ac42301c.mid": "/static/media/spirals-no-2.ac42301c.mid"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.599c6818.js",
+    "static/js/2.788e8461.chunk.js",
+    "static/css/main.a60116e0.chunk.css",
+    "static/js/main.06ebc631.chunk.js"
+  ]
+}

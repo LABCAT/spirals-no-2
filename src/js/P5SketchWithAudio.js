@@ -4,6 +4,7 @@ import "p5/lib/addons/p5.sound";
 import * as p5 from "p5";
 import { Midi } from '@tonejs/midi'
 import PlayIcon from './functions/PlayIcon.js';
+import { TetradicColourCalculator } from './functions/ColourCalculators';
 
 import audio from "../audio/spirals-no-2.ogg";
 import midi from "../audio/spirals-no-2.mid";
@@ -30,7 +31,9 @@ const P5SketchWithAudio = () => {
                 function(result) {
                     console.log(result);
                     const noteSet1 = result.tracks[3].notes; // Combinator 1
+                    const noteSet2 = result.tracks[0].notes; // Redrum
                     p.scheduleCueSet(noteSet1, 'executeCueSet1');
+                    p.scheduleCueSet(noteSet2, 'executeCueSet2');
                     p.audioLoaded = true;
                     document.getElementById("loader").classList.add("loading--complete");
                     document.getElementById("play-icon").classList.remove("fade-out");
@@ -59,11 +62,14 @@ const P5SketchWithAudio = () => {
             }
         } 
 
+        p.bgColour = {};
+
         p.setup = () => {
             p.canvas = p.createCanvas(p.canvasWidth, p.canvasHeight);
             p.background(0);
             p.colorMode(p.HSB);
             p.rectMode(p.CENTER);
+            p.bgColour = p.color(0, 0, 100);
         }
 
         p.pointCount = 16;
@@ -76,43 +82,77 @@ const P5SketchWithAudio = () => {
             }
         }
 
+        p.themes = ['rainbow', 'tetradic'];
+
+        p.theme = 'tetradic';
+
+        p.baseHue = 0;
+
+        p.colours = [];
+
         p.shapes = ['ellipse', 'equilateral', 'rect', 'pentagon', 'hexagon', 'octagon'];
 
+        p.sizeDivisor = 384;
+
         p.executeCueSet1 = (note) => {
-            const { currentCue } = note;
-            const compare = currentCue > 28 ? currentCue % 28 % 8 : currentCue % 8;
+            const { currentCue, duration } = note,
+                compare = currentCue > 28 ? currentCue % 28 % 8 : currentCue % 8;
+            
             p.loopsToDraw = compare === 0 ? 16 : compare  * 2;
-            p.background(0, 0, 100);
+
+            if(currentCue > 84) {
+                p.bgColour = p.color(0, 0, 0);
+            }
+
+            let multiplier = 1.5,
+                loops = p.loopsToDraw * 2 * multiplier;
+            
+            if(currentCue % 28 === 1) {
+                p.theme = p.random(p.themes);
+                p.baseHue = p.random(0, 360);
+                p.colours = TetradicColourCalculator(p, p.baseHue);
+                if(p.sizeDivisor > 64) {
+                    p.sizeDivisor = p.sizeDivisor - 64;
+                }
+            }
+
+            p.background(p.bgColour);
             p.strokeWeight(2);
+
             if(currentCue % 28 > 24 || currentCue % 28 < 1) {
-                p.loopsToDraw = 24;
-                p.background(0, 0, 0);
-                p.stroke(0, 0, 100);
+                p.loopsToDraw = p.sizeDivisor / 4 * 1.5;
+                multiplier = 1;
+                loops = currentCue % 28 === 0 ? p.loopsToDraw * 4 : p.loopsToDraw * (currentCue % 28 - 24);
+                p.background(p.baseHue, 100, 100, 0.2);
+                if(p.theme === 'rainbow') {
+                    p.background(0, 100, 100, 0.2);
+                }
             } 
             
-            const multiplier = 1;
-            const size = p.width >= p.height ? p.width / 64 * multiplier : p.height / 64 * multiplier;
-            const loops = (currentCue % 28 > 24 || currentCue % 28 < 1) ? p.loopsToDraw  * (currentCue % 28 - 24 === 0 ? 4 : currentCue % 28 - 24) : p.loopsToDraw * 2 * multiplier;
+            const size = p.width >= p.height ? p.width / p.sizeDivisor * multiplier : p.height / p.sizeDivisor * multiplier;
             const shape =  p.random(p.shapes);
+            const totalShapes = p.pointCount * loops;
+            let shapeCount = 0;
+            
             for (let index = 1; index <= loops; index++) {
-                let angle = 0;  // 0 would still work here
-                
+                let angle = 0;
                 let diameter = size * 0.75 * index;
                 let randHue = p.random(0, 360);
-                
-                // Update 360 to TWO_PI, still offset via angle
                 for(let i = angle; i < p.TWO_PI + angle; i += p.TWO_PI / p.pointCount){
-                    
                     let x = diameter / 2 * Math.cos(i + index * p.pointCount) + p.width / 2;
                     let y = diameter / 2 * Math.sin(i + index * p.pointCount) + p.height / 2;
-                    const delay = (currentCue % 28 > 24 || currentCue % 28 < 1) ? index * 4 : 25,
-                    fillColour = 360 / loops * index;
-
+                    const delay = (currentCue % 28 > 24 || currentCue % 28 < 1) ? (duration * 800 / totalShapes) * shapeCount : 20 * i,
+                    fillColour = p.theme === 'rainbow' ? 360 / loops * index : p.colours[index % 4]._getHue();
                     setTimeout(
                         function () {
                             p.fill(fillColour, 100, 100, 0.2);
-                            p.stroke(fillColour, 100, 100, 0.2);
-                            p.stroke(0, 0, 0);
+                            p.stroke(fillColour, 100, 100, 1);
+                            if(currentCue % 28 > 24 || currentCue % 28 < 1) {
+                                p.stroke(0, 0, 0, 0.5);
+                                if(currentCue > 84) {
+                                    p.stroke(fillColour, 0, 100, 0.5);
+                                }
+                            }
                             p[shape](x, y, size * 0.02 * index, size * 0.02 * index);
                             p.fill(fillColour, 100, 100, 0.4);
                             p.stroke(fillColour, 100, 100, 0.4);
@@ -121,9 +161,18 @@ const P5SketchWithAudio = () => {
                             p.stroke(fillColour, 0, 100, 0.6);
                             p[shape](x, y, size * 0.005 * index, size * 0.005 * index);
                         },
-                        (delay * i)
+                        delay
                     );
+                    shapeCount++;
                 }
+            }
+        }
+
+        p.executeCueSet2 = (note) => {
+            const { midi } = note;
+            if(midi === 43) {
+                // p.bgColour = p.random(p.colours);
+                // p.background(p.bgColour);
             }
         }
 
@@ -194,14 +243,16 @@ const P5SketchWithAudio = () => {
         * @param {Number} width    - radius of the hexagon
         */
         p.equilateral = (x, y, width) => {
-            const size = width,
-                x1 = x - size,
-                y1 = y + size,
-                x2 = x,
-                y2 = y - size,
-                x3 = x + size,
-                y3 = y + size;
-            p.triangle(x1,y1,x2,y2,x3,y3);
+            const size = width;
+            p.angleMode(p.DEGREES);
+            p.push();
+            p.translate(x, y);
+            p.rotate(270);
+            const x1 = size * p.cos(0), y1 = size * p.sin(0);
+            const x2 = size * p.cos(120), y2 = size * p.sin(120);
+            const x3 = size * p.cos(240), y3 = size * p.sin(240);
+            p.triangle(x1, y1, x2, y2, x3, y3)
+            p.pop();
         }
 
         /*
